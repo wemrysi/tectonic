@@ -44,5 +44,5 @@ abstract class Plate[A] {
   def unnestMeta(): Signal
 
   def finishRow(): Unit
-  def finishAll(): A
+  def finishBatch(): A
 }
