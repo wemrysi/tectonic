@@ -72,7 +72,7 @@ case class IncompleteParseException(msg: String) extends Exception(msg)
  * For now the parser requires input to be in UTF-8. This requirement
  * may eventually be relaxed.
  */
-abstract class Parser[A](plate: Plate[A]) {
+abstract class Parser[A](protected[this] final val plate: Plate[A]) {
 
   protected[this] final val utf8 = Charset.forName("UTF-8")
 
