@@ -16,33 +16,13 @@
 
 package tectonic
 
-import java.lang.CharSequence
+import scala.{Product, Serializable}
 
-import scala.{Int, Unit}
+sealed trait Enclosure extends Product with Serializable
 
-abstract class Plate[A] {
-  def nul(): Signal
-  def fls(): Signal
-  def tru(): Signal
-  def obj(): Signal
-  def arr(): Signal
-  def num(s: CharSequence, decIdx: Int, expIdx: Int): Signal
-  def str(s: CharSequence): Signal
-
-  def emptyMap(): Signal
-  def emptyArr(): Signal
-
-  def enclosure(): Enclosure
-
-  def nestMap(pathComponent: CharSequence): Signal
-  def unnestMap(): Signal
-
-  def nestArr(index: Int): Signal
-  def unnestArr(): Signal
-
-  def nestMeta(pathComponent: CharSequence): Signal
-  def unnestMeta(): Signal
-
-  def finishRow(): Unit
-  def finishAll(): A
+object Enclosure {
+  case object Map
+  case object Array
+  case object Meta
+  case object None
 }
