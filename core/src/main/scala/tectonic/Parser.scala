@@ -125,6 +125,12 @@ abstract class Parser[A](plate: Plate[A]) {
   @inline protected[this] final val ARREND = 4
   @inline protected[this] final val OBJEND = 5
 
+  // constants inlined here to avoid memory barriers on access
+  private[this] val EncMap = Enclosure.Map
+  private[this] val EncArray = Enclosure.Array
+  private[this] val EncMeta = Enclosure.Meta
+  private[this] val EncNone = Enclosure.None
+
   protected[this] def newline(i: Int): Unit
   protected[this] def line(): Int
   protected[this] def column(i: Int): Int
@@ -453,19 +459,19 @@ abstract class Parser[A](plate: Plate[A]) {
       } else {
         if ((c >= '0' && c <= '9') || c == '-') {
           val j = parseNum(i)
-          rparse(if (plate.enclosure() eq Enclosure.Map) OBJEND else ARREND, j)
+          rparse(if (plate.enclosure() eq EncMap) OBJEND else ARREND, j)
         } else if (c == '"') {
           val j = parseString(i, false)
-          rparse(if (plate.enclosure() eq Enclosure.Map) OBJEND else ARREND, j)
+          rparse(if (plate.enclosure() eq EncMap) OBJEND else ARREND, j)
         } else if (c == 't') {
           parseTrue(i)
-          rparse(if (plate.enclosure() eq Enclosure.Map) OBJEND else ARREND, i + 4)
+          rparse(if (plate.enclosure() eq EncMap) OBJEND else ARREND, i + 4)
         } else if (c == 'f') {
           parseFalse(i)
-          rparse(if (plate.enclosure() eq Enclosure.Map) OBJEND else ARREND, i + 5)
+          rparse(if (plate.enclosure() eq EncMap) OBJEND else ARREND, i + 5)
         } else if (c == 'n') {
           parseNull(i)
-          rparse(if (plate.enclosure() eq Enclosure.Map) OBJEND else ARREND, i + 4)
+          rparse(if (plate.enclosure() eq EncMap) OBJEND else ARREND, i + 4)
         } else {
           die(i, "expected json value")
         }
@@ -476,7 +482,7 @@ abstract class Parser[A](plate: Plate[A]) {
     ) {
       // we are inside an array or object and have seen a key or a closing
       // brace, respectively.
-      if (plate.enclosure() eq Enclosure.None) {    // TODO remove this check for performance
+      if (plate.enclosure() eq EncNone) {    // TODO remove this check for performance
         error("invalid enclosure: " + plate.enclosure())
       } else {
         (state: @switch) match {
@@ -488,11 +494,11 @@ abstract class Parser[A](plate: Plate[A]) {
 
         val enc = plate.enclosure()
 
-        if (enc eq Enclosure.None) {
+        if (enc eq EncNone) {
           plate.finishRow()
           i + 1
         } else {
-          rparse(if (enc eq Enclosure.Map) OBJEND else ARREND, i + 1)
+          rparse(if (enc eq EncMap) OBJEND else ARREND, i + 1)
         }
       }
     } else if (state == KEY) {
