@@ -21,8 +21,8 @@ import scala.{Product, Serializable}
 sealed trait Enclosure extends Product with Serializable
 
 object Enclosure {
-  case object Map
-  case object Array
-  case object Meta
-  case object None
+  case object Map extends Enclosure
+  case object Array extends Enclosure
+  case object Meta extends Enclosure
+  case object None extends Enclosure
 }

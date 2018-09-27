@@ -42,15 +42,15 @@ package tectonic
  * DEALINGS IN THE SOFTWARE.
  */
 
-import scala.{inline, sys, Array, Boolean, Char, Int, Nothing, Predef, Unit}, Predef._
+import scala.{inline, sys, Array, Boolean, Char, Int, Nothing, Predef, StringContext, Unit}, Predef._
 import scala.annotation.{switch, tailrec}
 
-import java.lang.{CharSequence, Exception, IndexOutOfBoundsException, String}
+import java.lang.{CharSequence, Exception, IndexOutOfBoundsException, String, SuppressWarnings}
 import java.nio.charset.Charset
 
-case class ParseException(msg: String, index: Int, line: Int, col: Int) extends Exception(msg)
+final case class ParseException(msg: String, index: Int, line: Int, col: Int) extends Exception(msg)
 
-case class IncompleteParseException(msg: String) extends Exception(msg)
+final case class IncompleteParseException(msg: String) extends Exception(msg)
 
 /**
  * Parser implements a state machine for correctly parsing JSON data.
@@ -72,6 +72,10 @@ case class IncompleteParseException(msg: String) extends Exception(msg)
  * For now the parser requires input to be in UTF-8. This requirement
  * may eventually be relaxed.
  */
+@SuppressWarnings(
+  Array(
+    "org.wartremover.warts.Var",
+    "org.wartremover.warts.FinalVal"))
 abstract class Parser[A](protected[this] final val plate: Plate[A]) {
 
   protected[this] final val utf8 = Charset.forName("UTF-8")
@@ -82,11 +86,13 @@ abstract class Parser[A](protected[this] final val plate: Plate[A]) {
    * Note that this should not be used on potential multi-byte
    * sequences.
    */
+  @SuppressWarnings(Array("org.wartremover.warts.Overloading"))
   protected[this] def at(i: Int): Char
 
   /**
    * Read the bytes/chars from 'i' until 'j' as a String.
    */
+  @SuppressWarnings(Array("org.wartremover.warts.Overloading"))
   protected[this] def at(i: Int, j: Int): CharSequence
 
   /**
@@ -126,15 +132,16 @@ abstract class Parser[A](protected[this] final val plate: Plate[A]) {
   @inline protected[this] final val OBJEND = 5
 
   // constants inlined here to avoid memory barriers on access
-  private[this] val EncMap = Enclosure.Map
-  private[this] val EncArray = Enclosure.Array
-  private[this] val EncMeta = Enclosure.Meta
-  private[this] val EncNone = Enclosure.None
+  private[this] val EncMap: Enclosure = Enclosure.Map
+  // private[this] val EncArray: Enclosure = Enclosure.Array
+  // private[this] val EncMeta: Enclosure = Enclosure.Meta
+  private[this] val EncNone: Enclosure = Enclosure.None
 
   protected[this] def newline(i: Int): Unit
   protected[this] def line(): Int
   protected[this] def column(i: Int): Int
 
+  @SuppressWarnings(Array("org.wartremover.warts.While"))
   protected[this] final val HexChars: Array[Int] = {
     val arr = new Array[Int](128)
     var i = 0
@@ -147,6 +154,10 @@ abstract class Parser[A](protected[this] final val plate: Plate[A]) {
   /**
    * Used to generate error messages with character info and offsets.
    */
+  @SuppressWarnings(
+    Array(
+      "org.wartremover.warts.NonUnitStatements",
+      "org.wartremover.warts.Throw"))
   protected[this] def die(i: Int, msg: String): Nothing = {
     val y = line() + 1
     val x = column(i) + 1
@@ -173,6 +184,11 @@ abstract class Parser[A](protected[this] final val plate: Plate[A]) {
    * side-effect that we know exactly how the user represented the
    * number.
    */
+  @SuppressWarnings(
+    Array(
+      "org.wartremover.warts.While",
+      "org.wartremover.warts.NonUnitStatements",
+      "org.wartremover.warts.Equals"))
   protected[this] final def parseNum(i: Int): Int = {
     var j = i
     var c = at(j)
@@ -236,6 +252,13 @@ abstract class Parser[A](protected[this] final val plate: Plate[A]) {
    *
    * This method has all the same caveats as the previous method.
    */
+  @SuppressWarnings(
+    Array(
+      "org.wartremover.warts.Var",
+      "org.wartremover.warts.While",
+      "org.wartremover.warts.Return",
+      "org.wartremover.warts.NonUnitStatements",
+      "org.wartremover.warts.Equals"))
   protected[this] final def parseNumSlow(i: Int): Int = {
     var j = i
     var c = at(j)
@@ -319,6 +342,7 @@ abstract class Parser[A](protected[this] final val plate: Plate[A]) {
    * NOTE: This is only capable of generating characters from the basic plane.
    * This is why it can only return Char instead of Int.
    */
+  @SuppressWarnings(Array("org.wartremover.warts.While"))
   protected[this] final def descape(s: CharSequence): Char = {
     val hc = HexChars
     var i = 0
@@ -341,9 +365,11 @@ abstract class Parser[A](protected[this] final val plate: Plate[A]) {
    *
    * Note that this method assumes that the first character has already been checked.
    */
+  @SuppressWarnings(Array("org.wartremover.warts.Equals"))
   protected[this] final def parseTrue(i: Int): Unit =
     if (at(i + 1) == 'r' && at(i + 2) == 'u' && at(i + 3) == 'e') {
-      plate.tru()
+      val _ = plate.tru()
+      ()
     } else {
       die(i, "expected true")
     }
@@ -353,9 +379,11 @@ abstract class Parser[A](protected[this] final val plate: Plate[A]) {
    *
    * Note that this method assumes that the first character has already been checked.
    */
+  @SuppressWarnings(Array("org.wartremover.warts.Equals"))
   protected[this] final def parseFalse(i: Int): Unit =
     if (at(i + 1) == 'a' && at(i + 2) == 'l' && at(i + 3) == 's' && at(i + 4) == 'e') {
-      plate.fls()
+      val _ = plate.fls()
+      ()
     } else {
       die(i, "expected false")
     }
@@ -365,9 +393,11 @@ abstract class Parser[A](protected[this] final val plate: Plate[A]) {
    *
    * Note that this method assumes that the first character has already been checked.
    */
+  @SuppressWarnings(Array("org.wartremover.warts.Equals"))
   protected[this] final def parseNull(i: Int): Unit =
     if (at(i + 1) == 'u' && at(i + 2) == 'l' && at(i + 3) == 'l') {
-      plate.nul()
+      val _ = plate.nul()
+      ()
     } else {
       die(i, "expected null")
     }
@@ -375,6 +405,10 @@ abstract class Parser[A](protected[this] final val plate: Plate[A]) {
   /**
    * Parse and return the next JSON value and the position beyond it.
    */
+  @SuppressWarnings(
+    Array(
+      "org.wartremover.warts.Throw",
+      "org.wartremover.warts.Recursion"))
   protected[this] final def parse(i: Int): Int = try {
     (at(i): @switch) match {
       // ignore whitespace
@@ -439,6 +473,10 @@ abstract class Parser[A](protected[this] final val plate: Plate[A]) {
    * improvements.
    */
   @tailrec
+  @SuppressWarnings(
+    Array(
+      "org.wartremover.warts.NonUnitStatements",
+      "org.wartremover.warts.Equals"))
   protected[this] final def rparse(state: Int, j: Int): Int = {
     val i = reset(j)
     checkpoint(state, i)
@@ -483,7 +521,7 @@ abstract class Parser[A](protected[this] final val plate: Plate[A]) {
       // we are inside an array or object and have seen a key or a closing
       // brace, respectively.
       if (plate.enclosure() eq EncNone) {    // TODO remove this check for performance
-        error("invalid enclosure: " + plate.enclosure())
+        error(s"invalid enclosure: ${plate.enclosure()}")
       } else {
         (state: @switch) match {
           case ARREND => plate.unnestArr()

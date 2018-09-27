@@ -42,8 +42,10 @@ package tectonic
  * DEALINGS IN THE SOFTWARE.
  */
 
-import scala.{Boolean, Byte, Int, Predef, StringContext}, Predef._
-import scala.annotation.{switch, tailrec}
+import scala.{Array, Boolean, Byte, Int, StringContext}
+import scala.annotation.switch
+
+import java.lang.SuppressWarnings
 
 /**
  * Trait used when the data to be parsed is in UTF-8.
@@ -58,6 +60,7 @@ import scala.annotation.{switch, tailrec}
  * to some trouble to be sure to de-escape correctly given that the
  * input data is UTF-8.
  */
+@SuppressWarnings(Array("org.wartremover.warts.Var"))
 trait ByteBasedParser[A] extends Parser[A] {
   protected[this] def byte(i: Int): Byte
 
@@ -68,6 +71,11 @@ trait ByteBasedParser[A] extends Parser[A] {
    * This method expects the data to be in UTF-8 and accesses it as bytes. Thus
    * we can just ignore any bytes with the highest bit set.
    */
+  @SuppressWarnings(
+    Array(
+      "org.wartremover.warts.Equals",
+      "org.wartremover.warts.Return",
+      "org.wartremover.warts.While"))
   protected[this] final def parseStringSimple(i: Int): Int = {
     var j = i
     var c: Int = byte(j) & 0xff
@@ -85,6 +93,12 @@ trait ByteBasedParser[A] extends Parser[A] {
    *
    * This method expects the data to be in UTF-8 and accesses it as bytes.
    */
+  @SuppressWarnings(
+    Array(
+      "org.wartremover.warts.Equals",
+      "org.wartremover.warts.NonUnitStatements",
+      "org.wartremover.warts.While",
+      "org.wartremover.warts.Return"))
   protected[this] final def parseString(i: Int, key: Boolean): Int = {
     val k = parseStringSimple(i + 1)
     if (k != -1) {

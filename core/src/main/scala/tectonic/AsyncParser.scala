@@ -45,10 +45,9 @@ package tectonic
 import scala.{inline, Array, Boolean, Byte, Char, Either, Int, Left, Right, Unit}
 import scala.annotation.switch
 import scala.math.max
-import scala.collection.mutable
 import scala.util.control
 
-import java.lang.{CharSequence, Exception, String, System}
+import java.lang.{CharSequence, Exception, String, SuppressWarnings, System}
 import java.nio.ByteBuffer
 
 object AsyncParser {
@@ -58,6 +57,7 @@ object AsyncParser {
   case object ValueStream extends Mode(-1, 0)
   case object SingleValue extends Mode(-1, -1)
 
+  @SuppressWarnings(Array("org.wartremover.warts.DefaultArguments"))
   def apply[A](plate: Plate[A], mode: Mode = SingleValue): AsyncParser[A] =
     new AsyncParser(plate, state = mode.start, curr = 0,
       data = new Array[Byte](131072), len = 0, allocated = 131072,
@@ -102,6 +102,7 @@ object AsyncParser {
  *   -1: No streaming is occuring. Only a single JSON value is
  *       allowed.
  */
+@SuppressWarnings(Array("org.wartremover.warts.Var"))
 final class AsyncParser[A] protected[tectonic] (
   _plate: Plate[A],
   protected[tectonic] var state: Int,
@@ -119,9 +120,13 @@ final class AsyncParser[A] protected[tectonic] (
   protected[this] final def newline(i: Int): Unit = { line += 1; pos = i + 1 }
   protected[this] final def column(i: Int) = i - pos
 
-  final def copy() =
+  final def copy(): AsyncParser[A] =
     new AsyncParser(_plate, state, curr, data.clone, len, allocated, offset, done, streamMode)
 
+  @SuppressWarnings(
+    Array(
+      "org.wartremover.warts.NonUnitStatements",
+      "org.wartremover.warts.Overloading"))
   final def absorb(buf: ByteBuffer): Either[ParseException, A] = {
     done = false
     val buflen = buf.limit() - buf.position()
@@ -132,9 +137,11 @@ final class AsyncParser[A] protected[tectonic] (
     churn()
   }
 
+  @SuppressWarnings(Array("org.wartremover.warts.Overloading"))
   final def absorb(bytes: Array[Byte]): Either[ParseException, A] =
     absorb(ByteBuffer.wrap(bytes))
 
+  @SuppressWarnings(Array("org.wartremover.warts.Overloading"))
   final def absorb(s: String): Either[ParseException, A] =
     absorb(ByteBuffer.wrap(s.getBytes(utf8)))
 
@@ -185,6 +192,10 @@ final class AsyncParser[A] protected[tectonic] (
   @inline private[this] final def ASYNC_POSTVAL = -2
   @inline private[this] final def ASYNC_PREVAL = -1
 
+  @SuppressWarnings(
+    Array(
+      "org.wartremover.warts.Equals",
+      "org.wartremover.warts.While"))
   protected[tectonic] def churn(): Either[ParseException, A] = {
 
     // we rely on exceptions to tell us when we run out of data
@@ -316,10 +327,12 @@ final class AsyncParser[A] protected[tectonic] (
    * This is a specialized accessor for the case where our underlying data are
    * bytes not chars.
    */
+  @SuppressWarnings(Array("org.wartremover.warts.Throw"))
   protected[this] final def byte(i: Int): Byte =
     if (i >= len) throw new AsyncException else data(i)
 
   // we need to signal if we got out-of-bounds
+  @SuppressWarnings(Array("org.wartremover.warts.Throw"))
   protected[this] final def at(i: Int): Char =
     if (i >= len) throw new AsyncException else data(i).toChar
 
@@ -330,6 +343,7 @@ final class AsyncParser[A] protected[tectonic] (
    * boundaries. Also, the resulting String is not guaranteed to have length
    * (k - i).
    */
+  @SuppressWarnings(Array("org.wartremover.warts.Throw"))
   protected[this] final def at(i: Int, k: Int): CharSequence = {
     if (k > len) throw new AsyncException
     val size = k - i
