@@ -521,10 +521,9 @@ abstract class Parser[A](protected[this] final val plate: Plate[A]) {
       // we are inside an array or object and have seen a key or a closing
       // brace, respectively.
       (state: @switch) match {
-        case ARREND => plate.unnestArr()
-        case OBJEND => plate.unnestMap()
         case ARRBEG => plate.arr()
         case OBJBEG => plate.map()
+        case ARREND | OBJEND => plate.unnest()
       }
 
       val enc = plate.enclosure()
@@ -552,6 +551,8 @@ abstract class Parser[A](protected[this] final val plate: Plate[A]) {
     } else if (state == ARREND) {
       // we are in an array, expecting to see a comma (before more data).
       if (c == ',') {
+        plate.unnest()
+        plate.nestArr()
         rparse(DATA, i + 1)
       } else {
         die(i, "expected ] or ,")
@@ -559,12 +560,14 @@ abstract class Parser[A](protected[this] final val plate: Plate[A]) {
     } else if (state == OBJEND) {
       // we are in an object, expecting to see a comma (before more data).
       if (c == ',') {
+        plate.unnest()
         rparse(KEY, i + 1)
       } else {
         die(i, "expected } or ,")
       }
     } else if (state == ARRBEG) {
       // we are starting an array, expecting to see data or a closing bracket.
+      plate.nestArr()
       rparse(DATA, i)
     } else {
       // we are starting an object, expecting to see a key or a closing brace.

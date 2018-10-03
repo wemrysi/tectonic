@@ -75,10 +75,10 @@ object AsyncParserSpecs extends Specification {
       """{"a":123, "b": false}""" must parseRowAs(
         NestMap("a"),
         Num("123", -1, -1),
-        UnnestMap,
+        Unnest,
         NestMap("b"),
         Fls,
-        UnnestMap)
+        Unnest)
     }
 
     "parse a map within a map" in {
@@ -86,24 +86,24 @@ object AsyncParserSpecs extends Specification {
         NestMap("a"),
         NestMap("b"),
         Nul,
-        UnnestMap,
-        UnnestMap)
+        Unnest,
+        Unnest)
     }
 
     "parse an array with four values" in {
       """["a", 123, "b", false]""" must parseRowAs(
-        NestArr(0),
+        NestArr,
         Str("a"),
-        UnnestArr,
-        NestArr(1),
+        Unnest,
+        NestArr,
         Num("123", -1, -1),
-        UnnestArr,
-        NestArr(2),
+        Unnest,
+        NestArr,
         Str("b"),
-        UnnestArr,
-        NestArr(3),
+        Unnest,
+        NestArr,
         Fls,
-        UnnestArr)
+        Unnest)
     }
 
     "parse two rows of scalars" in {
@@ -114,14 +114,14 @@ object AsyncParserSpecs extends Specification {
       """{"a": 3.14} {"b": false, "c": "abc"}""" must parseAs(
         NestMap("a"),
         Num("3.14", 1, -1),
-        UnnestMap,
+        Unnest,
         FinishRow,
         NestMap("b"),
         Fls,
-        UnnestMap,
+        Unnest,
         NestMap("c"),
         Str("abc"),
-        UnnestMap,
+        Unnest,
         FinishRow)
     }
   }
@@ -194,21 +194,9 @@ object AsyncParserSpecs extends Specification {
       Signal.Continue
     }
 
-    def unnestMap(): Signal = {
-      events += UnnestMap
-      enclosures = enclosures.tail
-      Signal.Continue
-    }
-
-    def nestArr(index: Int): Signal = {
-      events += NestArr(index)
+    def nestArr(): Signal = {
+      events += NestArr
       enclosures ::= Enclosure.Array
-      Signal.Continue
-    }
-
-    def unnestArr(): Signal = {
-      events += UnnestArr
-      enclosures = enclosures.tail
       Signal.Continue
     }
 
@@ -218,8 +206,8 @@ object AsyncParserSpecs extends Specification {
       Signal.Continue
     }
 
-    def unnestMeta(): Signal = {
-      events += UnnestMeta
+    def unnest(): Signal = {
+      events += Unnest
       enclosures = enclosures.tail
       Signal.Continue
     }
@@ -245,13 +233,10 @@ object AsyncParserSpecs extends Specification {
     final case class Str(s: CharSequence) extends Event
 
     final case class NestMap(pathComponent: CharSequence) extends Event
-    case object UnnestMap extends Event
-
-    final case class NestArr(index: Int) extends Event
-    case object UnnestArr extends Event
-
+    case object NestArr extends Event
     final case class NestMeta(pathComponent: CharSequence) extends Event
-    case object UnnestMeta extends Event
+
+    case object Unnest extends Event
 
     case object FinishRow extends Event
   }

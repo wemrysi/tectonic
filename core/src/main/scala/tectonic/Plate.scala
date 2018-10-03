@@ -32,13 +32,10 @@ abstract class Plate[A] {
   def enclosure(): Enclosure
 
   def nestMap(pathComponent: CharSequence): Signal
-  def unnestMap(): Signal
-
-  def nestArr(index: Int): Signal
-  def unnestArr(): Signal
-
+  def nestArr(): Signal
   def nestMeta(pathComponent: CharSequence): Signal
-  def unnestMeta(): Signal
+
+  def unnest(): Signal
 
   def finishRow(): Unit
   def finishBatch(): A
