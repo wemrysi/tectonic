@@ -130,7 +130,7 @@ object AsyncParserSpecs extends Specification {
     parseAs(expected :+ Event.FinishRow: _*)
 
   def parseAs(expected: Event*): Matcher[String] = { input: String =>
-    val parser = AsyncParser(new ReifyPlate, AsyncParser.ValueStream)
+    val parser = AsyncParser(new ReifiedTerminalPlate, AsyncParser.ValueStream)
 
     (parser.absorb(input), parser.finish()) match {
       case (Right(init), Right(tail)) =>
@@ -145,7 +145,7 @@ object AsyncParserSpecs extends Specification {
     }
   }
 
-  class ReifyPlate extends Plate[List[Event]] {
+  class ReifiedTerminalPlate extends Plate[List[Event]] {
     import Event._
 
     private val events = new mutable.ListBuffer[Event]
