@@ -21,5 +21,7 @@ lazy val core = project
   .settings(name := "tectonic")
   .settings(
     performMavenCentralSync := false,
-    publishAsOSSProject := true)
+    publishAsOSSProject := true,
+
+    libraryDependencies += "org.specs2" %% "specs2-core" % "4.3.4" % "test")
   .enablePlugins(AutomateHeaderPlugin)
