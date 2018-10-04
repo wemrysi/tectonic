@@ -27,7 +27,7 @@ lazy val core = project
 lazy val test = project
   .in(file("test"))
   .dependsOn(core)
-  .settings(name := "tectonic")
+  .settings(name := "tectonic-test")
   .settings(
     performMavenCentralSync := false,
     publishAsOSSProject := true,
