@@ -19,11 +19,10 @@ package tectonic
 import org.specs2.matcher.Matcher
 import org.specs2.mutable.Specification
 
-import scala.{Array, Int, List, Nil, Product, Serializable, StringContext, Unit}
-import scala.collection.mutable
+import scala.{Array, StringContext}
 import scala.util.{Left, Right}
 
-import java.lang.{CharSequence, String, SuppressWarnings}
+import java.lang.{String, SuppressWarnings}
 
 @SuppressWarnings(Array("org.wartremover.warts.Equals"))
 object AsyncParserSpecs extends Specification {
@@ -143,101 +142,5 @@ object AsyncParserSpecs extends Specification {
       case (_, Left(err)) =>
         (false, s"failed to parse with error '${err.getMessage}' at ${err.line}:${err.col} (i=${err.index})")
     }
-  }
-
-  class ReifiedTerminalPlate extends Plate[List[Event]] {
-    import Event._
-
-    private val events = new mutable.ListBuffer[Event]
-    private var enclosures: List[Enclosure] = Enclosure.None :: Nil
-
-    def nul(): Signal = {
-      events += Nul
-      Signal.Continue
-    }
-
-    def fls(): Signal = {
-      events += Fls
-      Signal.Continue
-    }
-
-    def tru(): Signal = {
-      events += Tru
-      Signal.Continue
-    }
-
-    def map(): Signal = {
-      events += Map
-      Signal.Continue
-    }
-
-    def arr(): Signal = {
-      events += Arr
-      Signal.Continue
-    }
-
-    def num(s: CharSequence, decIdx: Int, expIdx: Int): Signal = {
-      events += Num(s, decIdx, expIdx)
-      Signal.Continue
-    }
-
-    def str(s: CharSequence): Signal = {
-      events += Str(s)
-      Signal.Continue
-    }
-
-    def enclosure(): Enclosure = enclosures.head
-
-    def nestMap(pathComponent: CharSequence): Signal = {
-      events += NestMap(pathComponent)
-      enclosures ::= Enclosure.Map
-      Signal.Continue
-    }
-
-    def nestArr(): Signal = {
-      events += NestArr
-      enclosures ::= Enclosure.Array
-      Signal.Continue
-    }
-
-    def nestMeta(pathComponent: CharSequence): Signal = {
-      events += NestMeta(pathComponent)
-      enclosures ::= Enclosure.Meta
-      Signal.Continue
-    }
-
-    def unnest(): Signal = {
-      events += Unnest
-      enclosures = enclosures.tail
-      Signal.Continue
-    }
-
-    def finishRow(): Unit = events += FinishRow
-
-    def finishBatch(): List[Event] = {
-      val back = events.toList
-      events.clear()
-      back
-    }
-  }
-
-  sealed trait Event extends Product with Serializable
-
-  object Event {
-    case object Nul extends Event
-    case object Fls extends Event
-    case object Tru extends Event
-    case object Map extends Event
-    case object Arr extends Event
-    final case class Num(s: CharSequence, decIdx: Int, expIdx: Int) extends Event
-    final case class Str(s: CharSequence) extends Event
-
-    final case class NestMap(pathComponent: CharSequence) extends Event
-    case object NestArr extends Event
-    final case class NestMeta(pathComponent: CharSequence) extends Event
-
-    case object Unnest extends Event
-
-    case object FinishRow extends Event
   }
 }
