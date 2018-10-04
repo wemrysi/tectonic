@@ -36,10 +36,7 @@ jobs:
 
     - stage: publish
       env:
-      script:
-        - set -e
-        - $SBT transferPublishAndTagResources
-        - TRAVIS_JOB_NUMBER=1 scripts/publishAndTag 'slamdata/tectonic'
+      script: scripts/tectonicPublishAndTag
 
       git:
         depth: false
