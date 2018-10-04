@@ -24,24 +24,18 @@ abstract class Plate[A] {
   def nul(): Signal
   def fls(): Signal
   def tru(): Signal
-  def obj(): Signal
+  def map(): Signal
   def arr(): Signal
   def num(s: CharSequence, decIdx: Int, expIdx: Int): Signal
   def str(s: CharSequence): Signal
 
-  def emptyMap(): Signal
-  def emptyArr(): Signal
-
   def enclosure(): Enclosure
 
   def nestMap(pathComponent: CharSequence): Signal
-  def unnestMap(): Signal
-
-  def nestArr(index: Int): Signal
-  def unnestArr(): Signal
-
+  def nestArr(): Signal
   def nestMeta(pathComponent: CharSequence): Signal
-  def unnestMeta(): Signal
+
+  def unnest(): Signal
 
   def finishRow(): Unit
   def finishBatch(): A

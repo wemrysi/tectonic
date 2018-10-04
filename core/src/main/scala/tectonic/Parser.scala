@@ -42,7 +42,7 @@ package tectonic
  * DEALINGS IN THE SOFTWARE.
  */
 
-import scala.{inline, sys, Array, Boolean, Char, Int, Nothing, Predef, StringContext, Unit}, Predef._
+import scala.{inline, sys, Array, Boolean, Char, Int, Nothing, Predef, Unit}, Predef._
 import scala.annotation.{switch, tailrec}
 
 import java.lang.{CharSequence, Exception, IndexOutOfBoundsException, String, SuppressWarnings}
@@ -520,24 +520,19 @@ abstract class Parser[A](protected[this] final val plate: Plate[A]) {
     ) {
       // we are inside an array or object and have seen a key or a closing
       // brace, respectively.
-      if (plate.enclosure() eq EncNone) {    // TODO remove this check for performance
-        error(s"invalid enclosure: ${plate.enclosure()}")
+      (state: @switch) match {
+        case ARRBEG => plate.arr()
+        case OBJBEG => plate.map()
+        case ARREND | OBJEND => plate.unnest()
+      }
+
+      val enc = plate.enclosure()
+
+      if (enc eq EncNone) {
+        plate.finishRow()
+        i + 1
       } else {
-        (state: @switch) match {
-          case ARREND => plate.unnestArr()
-          case OBJEND => plate.unnestMap()
-          case ARRBEG => plate.emptyArr()
-          case OBJBEG => plate.emptyMap()
-        }
-
-        val enc = plate.enclosure()
-
-        if (enc eq EncNone) {
-          plate.finishRow()
-          i + 1
-        } else {
-          rparse(if (enc eq EncMap) OBJEND else ARREND, i + 1)
-        }
+        rparse(if (enc eq EncMap) OBJEND else ARREND, i + 1)
       }
     } else if (state == KEY) {
       // we are in an object expecting to see a key.
@@ -556,6 +551,8 @@ abstract class Parser[A](protected[this] final val plate: Plate[A]) {
     } else if (state == ARREND) {
       // we are in an array, expecting to see a comma (before more data).
       if (c == ',') {
+        plate.unnest()
+        plate.nestArr()
         rparse(DATA, i + 1)
       } else {
         die(i, "expected ] or ,")
@@ -563,12 +560,14 @@ abstract class Parser[A](protected[this] final val plate: Plate[A]) {
     } else if (state == OBJEND) {
       // we are in an object, expecting to see a comma (before more data).
       if (c == ',') {
+        plate.unnest()
         rparse(KEY, i + 1)
       } else {
         die(i, "expected } or ,")
       }
     } else if (state == ARRBEG) {
       // we are starting an array, expecting to see data or a closing bracket.
+      plate.nestArr()
       rparse(DATA, i)
     } else {
       // we are starting an object, expecting to see a key or a closing brace.
