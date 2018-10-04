@@ -15,6 +15,7 @@
  */
 
 package tectonic
+package test
 
 import scala.{Array, Int, List, Nil, Unit}
 import scala.collection.mutable

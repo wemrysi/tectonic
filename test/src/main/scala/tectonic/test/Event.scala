@@ -15,6 +15,7 @@
  */
 
 package tectonic
+package test
 
 import scala.{Int, Product, Serializable}
 

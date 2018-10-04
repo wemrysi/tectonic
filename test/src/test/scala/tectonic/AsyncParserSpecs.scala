@@ -16,13 +16,13 @@
 
 package tectonic
 
-import org.specs2.matcher.Matcher
 import org.specs2.mutable.Specification
 
-import scala.{Array, StringContext}
-import scala.util.{Left, Right}
+import tectonic.test._
 
-import java.lang.{String, SuppressWarnings}
+import scala.Array
+
+import java.lang.SuppressWarnings
 
 @SuppressWarnings(Array("org.wartremover.warts.Equals"))
 object AsyncParserSpecs extends Specification {
@@ -122,25 +122,6 @@ object AsyncParserSpecs extends Specification {
         Str("abc"),
         Unnest,
         FinishRow)
-    }
-  }
-
-  def parseRowAs(expected: Event*) =
-    parseAs(expected :+ Event.FinishRow: _*)
-
-  def parseAs(expected: Event*): Matcher[String] = { input: String =>
-    val parser = AsyncParser(new ReifiedTerminalPlate, AsyncParser.ValueStream)
-
-    (parser.absorb(input), parser.finish()) match {
-      case (Right(init), Right(tail)) =>
-        val results = init ++ tail
-        (results == expected.toList, s"expected $expected and got $results")
-
-      case (Left(err), _) =>
-        (false, s"failed to parse with error '${err.getMessage}' at ${err.line}:${err.col} (i=${err.index})")
-
-      case (_, Left(err)) =>
-        (false, s"failed to parse with error '${err.getMessage}' at ${err.line}:${err.col} (i=${err.index})")
     }
   }
 }
