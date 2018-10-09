@@ -17,7 +17,7 @@
 package tectonic
 package test
 
-import scala.{Array, Int, List, Nil, Unit}
+import scala.{Array, Boolean, Int, List, Nil, Unit}
 import scala.collection.mutable
 
 import java.lang.{CharSequence, SuppressWarnings}
@@ -96,7 +96,7 @@ final class ReifiedTerminalPlate extends Plate[List[Event]] {
 
   def finishRow(): Unit = events += FinishRow
 
-  def finishBatch(): List[Event] = {
+  def finishBatch(terminal: Boolean): List[Event] = {
     val back = events.toList
     events.clear()
     back

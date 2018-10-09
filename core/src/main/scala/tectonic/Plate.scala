@@ -18,7 +18,7 @@ package tectonic
 
 import java.lang.CharSequence
 
-import scala.{Int, Unit}
+import scala.{Boolean, Int, Unit}
 
 abstract class Plate[A] {
   def nul(): Signal
@@ -38,5 +38,5 @@ abstract class Plate[A] {
   def unnest(): Signal
 
   def finishRow(): Unit
-  def finishBatch(): A
+  def finishBatch(terminal: Boolean): A
 }

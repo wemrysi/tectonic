@@ -276,16 +276,16 @@ final class AsyncParser[A] protected[tectonic] (
           offset = j
         }
       }
-      Right(plate.finishBatch())
+      Right(plate.finishBatch(false))
     } catch {
       case e: AsyncException =>
         if (done) {
           // if we are done, make sure we ended at a good stopping point
-          if (state == ASYNC_PREVAL || state == ASYNC_END) Right(plate.finishBatch())
+          if (state == ASYNC_PREVAL || state == ASYNC_END) Right(plate.finishBatch(false))
           else Left(ParseException("exhausted input", -1, -1, -1))
         } else {
           // we ran out of data, so return what we have so far
-          Right(plate.finishBatch())
+          Right(plate.finishBatch(false))
         }
 
       case e: ParseException =>
