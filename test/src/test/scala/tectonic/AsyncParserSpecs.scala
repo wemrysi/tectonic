@@ -20,9 +20,10 @@ import org.specs2.mutable.Specification
 
 import tectonic.test._
 
-import scala.Array
+import scala.{Array, Boolean, Int, List, Unit}
+import scala.collection.mutable
 
-import java.lang.SuppressWarnings
+import java.lang.{CharSequence, SuppressWarnings}
 
 @SuppressWarnings(Array("org.wartremover.warts.Equals"))
 object AsyncParserSpecs extends Specification {
@@ -122,6 +123,71 @@ object AsyncParserSpecs extends Specification {
         Str("abc"),
         Unnest,
         FinishRow)
+    }
+
+    "call finishBatch with false, and then true on complete value" in {
+      val calls = new mutable.ListBuffer[Boolean]
+
+      val parser = AsyncParser(new Plate[Unit] {
+        def nul(): Signal = Signal.Continue
+        def fls(): Signal = Signal.Continue
+        def tru(): Signal = Signal.Continue
+        def map(): Signal = Signal.Continue
+        def arr(): Signal = Signal.Continue
+        def num(s: CharSequence, decIdx: Int, expIdx: Int): Signal = Signal.Continue
+        def str(s: CharSequence): Signal = Signal.Continue
+
+        def enclosure(): Enclosure = Enclosure.None
+
+        def nestMap(pathComponent: CharSequence): Signal = Signal.Continue
+        def nestArr(): Signal = Signal.Continue
+        def nestMeta(pathComponent: CharSequence): Signal = Signal.Continue
+
+        def unnest(): Signal = Signal.Continue
+
+        def finishRow(): Unit = ()
+        def finishBatch(terminal: Boolean): Unit = calls += terminal
+      }, AsyncParser.ValueStream)
+
+      parser.absorb("42") must beRight(())
+      calls.toList mustEqual List(false)
+
+      parser.finish() must beRight(())
+      calls.toList mustEqual List(false, true)
+    }
+
+    "call finishBatch with false, and then true on incomplete value" in {
+      val calls = new mutable.ListBuffer[Boolean]
+
+      val parser = AsyncParser(new Plate[Unit] {
+        def nul(): Signal = Signal.Continue
+        def fls(): Signal = Signal.Continue
+        def tru(): Signal = Signal.Continue
+        def map(): Signal = Signal.Continue
+        def arr(): Signal = Signal.Continue
+        def num(s: CharSequence, decIdx: Int, expIdx: Int): Signal = Signal.Continue
+        def str(s: CharSequence): Signal = Signal.Continue
+
+        def enclosure(): Enclosure = Enclosure.None
+
+        def nestMap(pathComponent: CharSequence): Signal = Signal.Continue
+        def nestArr(): Signal = Signal.Continue
+        def nestMeta(pathComponent: CharSequence): Signal = Signal.Continue
+
+        def unnest(): Signal = Signal.Continue
+
+        def finishRow(): Unit = ()
+        def finishBatch(terminal: Boolean): Unit = calls += terminal
+      }, AsyncParser.ValueStream)
+
+      parser.absorb("\"h") must beRight(())
+      calls.toList mustEqual List(false)
+
+      parser.absorb("i\"") must beRight(())
+      calls.toList mustEqual List(false, false)
+
+      parser.finish() must beRight(())
+      calls.toList mustEqual List(false, false, true)
     }
   }
 }
