@@ -15,6 +15,7 @@
  */
 
 package tectonic
+package util
 
 /*
  * This file substantially copied from the Jawn project and lightly modified. All
