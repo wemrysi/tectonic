@@ -102,3 +102,24 @@ final class ReifiedTerminalPlate extends Plate[List[Event]] {
     back
   }
 }
+
+object ReifiedTerminalPlate {
+  def visit[A](events: List[Event], plate: Plate[A]): A = {
+    events foreach {
+      case Event.Nul => plate.nul()
+      case Event.Fls => plate.fls()
+      case Event.Tru => plate.tru()
+      case Event.Map => plate.map()
+      case Event.Arr => plate.arr()
+      case Event.Num(s, decIdx, expIdx) => plate.num(s, decIdx, expIdx)
+      case Event.Str(s) => plate.str(s)
+      case Event.NestMap(path) => plate.nestMap(path)
+      case Event.NestArr => plate.nestArr()
+      case Event.NestMeta(path) => plate.nestMeta(path)
+      case Event.Unnest => plate.unnest()
+      case Event.FinishRow => plate.finishRow()
+    }
+
+    plate.finishBatch(true)
+  }
+}
