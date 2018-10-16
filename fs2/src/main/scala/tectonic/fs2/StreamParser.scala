@@ -17,17 +17,16 @@
 package tectonic
 package fs2
 
-import cats.Foldable
 import cats.effect.Sync
 import cats.syntax.all._
 
 import _root_.fs2.{Chunk, Pipe, Stream}
 
-import scala.{Byte, List}
+import scala.{Array, Byte, List}
 import scala.collection.mutable
 import scala.util.Either
 
-import java.lang.Throwable
+import java.lang.{SuppressWarnings, Throwable}
 
 object StreamParser {
 
@@ -36,23 +35,26 @@ object StreamParser {
    * parser, which may be constructed effectfully. Any parse errors will be sequenced
    * into the stream as a `tectonic.ParseException`, halting consumption.
    */
-  def apply[F[_]: Sync, C[_]: Foldable, A](
-      parserF: F[GenericParser[C[A]]])
+  @SuppressWarnings(Array("org.wartremover.warts.Throw"))
+  def apply[F[_]: Sync, A](
+      parserF: F[GenericParser[Chunk[A]]])
       : Pipe[F, Byte, A] = { s =>
 
     Stream.eval(parserF) flatMap { parser =>
       val init = s.chunks flatMap { chunk =>
         val listF = chunk match {
           case chunk: Chunk.ByteBuffer =>
-            Sync[F].delay(parser.absorb(chunk.buf): Either[Throwable, C[A]]).rethrow.map(List(_))
+            Sync[F].delay(parser.absorb(chunk.buf): Either[Throwable, Chunk[A]]).rethrow.map(List(_))
 
           case Chunk.ByteVectorChunk(bv) =>
-            bv.foldLeftBB(List[C[A]]().pure[F]) { (cF, buf) =>
-              (cF, Sync[F].delay(parser.absorb(buf): Either[Throwable, C[A]]).rethrow).mapN((tail, c) => c :: tail)
+            Sync[F] delay {
+              bv.foldLeftBB(List[Chunk[A]]()) { (acc, buf) =>
+                parser.absorb(buf).fold(throw _, _ :: acc)
+              }
             }
 
           case chunk =>
-            Sync[F].delay(parser.absorb(chunk.toByteBuffer): Either[Throwable, C[A]]).rethrow.map(List(_))
+            Sync[F].delay(parser.absorb(chunk.toByteBuffer): Either[Throwable, Chunk[A]]).rethrow.map(List(_))
         }
 
         val chunkF = listF map { cs =>
@@ -71,7 +73,7 @@ object StreamParser {
         Stream.evalUnChunk(chunkF)
       }
 
-      val finishF = Sync[F].delay(parser.finish(): Either[Throwable, C[A]]).rethrow map { ca =>
+      val finishF = Sync[F].delay(parser.finish(): Either[Throwable, Chunk[A]]).rethrow map { ca =>
         val buffer = new mutable.ListBuffer[A]
         ca.foldLeft(()) { (_, a) =>
           val _ = buffer += a

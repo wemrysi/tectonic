@@ -17,7 +17,6 @@
 package tectonic
 package fs2
 
-import cats.instances.list._
 import cats.effect.IO
 
 import _root_.fs2.{Chunk, Stream}
@@ -36,8 +35,8 @@ import java.nio.ByteBuffer
 object StreamParserSpecs extends Specification {
   import Event._
 
-  val parserF: IO[GenericParser[List[Event]]] =
-    IO(Parser(new ReifiedTerminalPlate, Parser.ValueStream))
+  val parserF: IO[GenericParser[Chunk[Event]]] =
+    IO(Parser(new ReifiedTerminalPlate().mapDelegate(Chunk.seq(_)), Parser.ValueStream))
 
   "stream parser transduction" should {
     "parse a single value" in {
