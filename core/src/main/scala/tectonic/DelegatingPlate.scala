@@ -43,9 +43,6 @@ abstract class DelegatingPlate[A](val delegate: Plate[A]) extends Plate[A] {
   def str(s: CharSequence): Signal =
     delegate.str(s)
 
-  def enclosure(): Enclosure =
-    delegate.enclosure()
-
   def nestMap(pathComponent: CharSequence): Signal =
     delegate.nestMap(pathComponent)
 

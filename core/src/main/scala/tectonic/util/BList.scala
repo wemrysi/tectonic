@@ -15,14 +15,16 @@
  */
 
 package tectonic
+package util
 
-import scala.{Product, Serializable}
+import scala.{Boolean, Product, Serializable}
 
-sealed trait Enclosure extends Product with Serializable
+private[tectonic] sealed abstract class BList extends Product with Serializable {
+  def head: Boolean
+  def ::(head: Boolean): BList = BList.Cons(head, this)
+}
 
-object Enclosure {
-  case object Map extends Enclosure
-  case object Array extends Enclosure
-  case object Meta extends Enclosure
-  case object None extends Enclosure
+private[tectonic] object BList {
+  final case class Cons(head: Boolean, tail: BList) extends BList
+  final case class Last(head: Boolean) extends BList
 }

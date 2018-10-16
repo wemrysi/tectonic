@@ -17,7 +17,7 @@
 package tectonic
 package test
 
-import scala.{Array, Boolean, Int, List, Nil, Unit}
+import scala.{Array, Boolean, Int, List, Unit}
 import scala.collection.mutable
 
 import java.lang.{CharSequence, SuppressWarnings}
@@ -31,7 +31,6 @@ final class ReifiedTerminalPlate extends Plate[List[Event]] {
   import Event._
 
   private val events = new mutable.ListBuffer[Event]
-  private var enclosures: List[Enclosure] = Enclosure.None :: Nil
 
   def nul(): Signal = {
     events += Nul
@@ -68,29 +67,23 @@ final class ReifiedTerminalPlate extends Plate[List[Event]] {
     Signal.Continue
   }
 
-  def enclosure(): Enclosure = enclosures.head
-
   def nestMap(pathComponent: CharSequence): Signal = {
     events += NestMap(pathComponent)
-    enclosures ::= Enclosure.Map
     Signal.Continue
   }
 
   def nestArr(): Signal = {
     events += NestArr
-    enclosures ::= Enclosure.Array
     Signal.Continue
   }
 
   def nestMeta(pathComponent: CharSequence): Signal = {
     events += NestMeta(pathComponent)
-    enclosures ::= Enclosure.Meta
     Signal.Continue
   }
 
   def unnest(): Signal = {
     events += Unnest
-    enclosures = enclosures.tail
     Signal.Continue
   }
 

@@ -43,7 +43,9 @@ package json
  * DEALINGS IN THE SOFTWARE.
  */
 
-import scala.{inline, sys, Array, Boolean, Char, Int, Nothing, Predef, Unit}, Predef._
+import tectonic.util.BList
+
+import scala.{inline, sys, Array, Boolean, Char, Int, Long, Nothing, Predef, Unit}, Predef._
 import scala.annotation.{switch, tailrec}
 
 import java.lang.{CharSequence, Exception, IndexOutOfBoundsException, String, SuppressWarnings}
@@ -114,7 +116,7 @@ abstract class Parser[A](protected[this] final val plate: Plate[A]) {
    * The checkpoint() method is used to allow some parsers to store
    * their progress.
    */
-  protected[this] def checkpoint(state: Int, i: Int): Unit
+  protected[this] def checkpoint(state: Int, i: Int, ring: Long, offset: Int, fallback: BList): Unit
 
   /**
    * Should be called when parsing is finished.
@@ -131,12 +133,6 @@ abstract class Parser[A](protected[this] final val plate: Plate[A]) {
   @inline protected[this] final val SEP = 3
   @inline protected[this] final val ARREND = 4
   @inline protected[this] final val OBJEND = 5
-
-  // constants inlined here to avoid memory barriers on access
-  private[this] val EncMap: Enclosure = Enclosure.Map
-  // private[this] val EncArray: Enclosure = Enclosure.Array
-  // private[this] val EncMeta: Enclosure = Enclosure.Meta
-  private[this] val EncNone: Enclosure = Enclosure.None
 
   protected[this] def newline(i: Int): Unit
   protected[this] def line(): Int
@@ -409,7 +405,8 @@ abstract class Parser[A](protected[this] final val plate: Plate[A]) {
   @SuppressWarnings(
     Array(
       "org.wartremover.warts.Throw",
-      "org.wartremover.warts.Recursion"))
+      "org.wartremover.warts.Recursion",
+      "org.wartremover.warts.Null"))
   protected[this] final def parse(i: Int): Int = try {
     (at(i): @switch) match {
       // ignore whitespace
@@ -420,8 +417,8 @@ abstract class Parser[A](protected[this] final val plate: Plate[A]) {
 
       // if we have a recursive top-level structure, we'll delegate the parsing
       // duties to our good friend rparse().
-      case '[' => rparse(ARRBEG, i + 1)
-      case '{' => rparse(OBJBEG, i + 1)
+      case '[' => rparse(ARRBEG, i + 1, 0L, 0, null)
+      case '{' => rparse(OBJBEG, i + 1, 1L, 0, null)
 
       // we have a single top-level number
       case '-' | '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' =>
@@ -478,39 +475,61 @@ abstract class Parser[A](protected[this] final val plate: Plate[A]) {
     Array(
       "org.wartremover.warts.NonUnitStatements",
       "org.wartremover.warts.Equals"))
-  protected[this] final def rparse(state: Int, j: Int): Int = {
+  protected[this] final def rparse(state: Int, j: Int, ring: Long, offset: Int, fallback: BList): Int = {
     val i = reset(j)
-    checkpoint(state, i)
+    checkpoint(state, i, ring, offset, fallback)
 
     val c = at(i)
 
     if (c == '\n') {
       newline(i)
-      rparse(state, i + 1)
+      rparse(state, i + 1, ring, offset, fallback)
     } else if (c == ' ' || c == '\t' || c == '\r') {
-      rparse(state, i + 1)
+      rparse(state, i + 1, ring, offset, fallback)
     } else if (state == DATA) {
       // we are inside an object or array expecting to see data
       if (c == '[') {
-        rparse(ARRBEG, i + 1)
+        var offset2 = offset
+        var ring2 = ring
+        var fallback2 = fallback
+
+        if (checkPushEnclosure(ring, offset, fallback)) {
+          offset2 = offset + 1
+          ring2 = pushEnclosureRing(ring, offset, false)
+        } else {
+          fallback2 = pushEnclosureFallback(fallback, false)
+        }
+
+        rparse(ARRBEG, i + 1, ring2, offset2, fallback2)
       } else if (c == '{') {
-        rparse(OBJBEG, i + 1)
+        var offset2 = offset
+        var ring2 = ring
+        var fallback2 = fallback
+
+        if (checkPushEnclosure(ring, offset, fallback)) {
+          offset2 = offset + 1
+          ring2 = pushEnclosureRing(ring, offset, true)
+        } else {
+          fallback2 = pushEnclosureFallback(fallback, true)
+        }
+
+        rparse(OBJBEG, i + 1, ring2, offset2, fallback2)
       } else {
         if ((c >= '0' && c <= '9') || c == '-') {
           val j = parseNum(i)
-          rparse(if (plate.enclosure() eq EncMap) OBJEND else ARREND, j)
+          rparse(if (enclosure(ring, offset, fallback)) OBJEND else ARREND, j, ring, offset, fallback)
         } else if (c == '"') {
           val j = parseString(i, false)
-          rparse(if (plate.enclosure() eq EncMap) OBJEND else ARREND, j)
+          rparse(if (enclosure(ring, offset, fallback)) OBJEND else ARREND, j, ring, offset, fallback)
         } else if (c == 't') {
           parseTrue(i)
-          rparse(if (plate.enclosure() eq EncMap) OBJEND else ARREND, i + 4)
+          rparse(if (enclosure(ring, offset, fallback)) OBJEND else ARREND, i + 4, ring, offset, fallback)
         } else if (c == 'f') {
           parseFalse(i)
-          rparse(if (plate.enclosure() eq EncMap) OBJEND else ARREND, i + 5)
+          rparse(if (enclosure(ring, offset, fallback)) OBJEND else ARREND, i + 5, ring, offset, fallback)
         } else if (c == 'n') {
           parseNull(i)
-          rparse(if (plate.enclosure() eq EncMap) OBJEND else ARREND, i + 4)
+          rparse(if (enclosure(ring, offset, fallback)) OBJEND else ARREND, i + 4, ring, offset, fallback)
         } else {
           die(i, "expected json value")
         }
@@ -521,31 +540,38 @@ abstract class Parser[A](protected[this] final val plate: Plate[A]) {
     ) {
       // we are inside an array or object and have seen a key or a closing
       // brace, respectively.
+
+      var offset2 = offset
+      var fallback2 = fallback
+
+      if (checkPopEnclosure(ring, offset, fallback))
+        offset2 = offset - 1
+      else
+        fallback2 = popEnclosureFallback(fallback)
+
       (state: @switch) match {
         case ARRBEG => plate.arr()
         case OBJBEG => plate.map()
         case ARREND | OBJEND => plate.unnest()
       }
 
-      val enc = plate.enclosure()
-
-      if (enc eq EncNone) {
+      if (offset2 < 0) {
         plate.finishRow()
         i + 1
       } else {
-        rparse(if (enc eq EncMap) OBJEND else ARREND, i + 1)
+        rparse(if (enclosure(ring, offset2, fallback2)) OBJEND else ARREND, i + 1, ring, offset2, fallback2)
       }
     } else if (state == KEY) {
       // we are in an object expecting to see a key.
       if (c == '"') {
-        rparse(SEP, parseString(i, true))
+        rparse(SEP, parseString(i, true), ring, offset, fallback)
       } else {
         die(i, "expected \"")
       }
     } else if (state == SEP) {
       // we are in an object just after a key, expecting to see a colon.
       if (c == ':') {
-        rparse(DATA, i + 1)
+        rparse(DATA, i + 1, ring, offset, fallback)
       } else {
         die(i, "expected :")
       }
@@ -554,7 +580,7 @@ abstract class Parser[A](protected[this] final val plate: Plate[A]) {
       if (c == ',') {
         plate.unnest()
         plate.nestArr()
-        rparse(DATA, i + 1)
+        rparse(DATA, i + 1, ring, offset, fallback)
       } else {
         die(i, "expected ] or ,")
       }
@@ -562,17 +588,65 @@ abstract class Parser[A](protected[this] final val plate: Plate[A]) {
       // we are in an object, expecting to see a comma (before more data).
       if (c == ',') {
         plate.unnest()
-        rparse(KEY, i + 1)
+        rparse(KEY, i + 1, ring, offset, fallback)
       } else {
         die(i, "expected } or ,")
       }
     } else if (state == ARRBEG) {
       // we are starting an array, expecting to see data or a closing bracket.
       plate.nestArr()
-      rparse(DATA, i)
+      rparse(DATA, i, ring, offset, fallback)
     } else {
       // we are starting an object, expecting to see a key or a closing brace.
-      rparse(KEY, i)
+      rparse(KEY, i, ring, offset, fallback)
     }
+  }
+
+  /**
+   * A value of true indicates an object, and false indicates an array. Note that
+   * a non-existent enclosure is indicated by offset < 0
+   */
+  @inline
+  @SuppressWarnings(Array("org.wartremover.warts.Equals"))
+  private[this] def enclosure(ring: Long, offset: Int, fallback: BList): Boolean = {
+    if (fallback == null)
+      (ring & (1L << offset)) != 0
+    else
+      fallback.head
+  }
+
+  @inline
+  @SuppressWarnings(Array("org.wartremover.warts.Equals"))
+  private[this] def checkPushEnclosure(ring: Long, offset: Int, fallback: BList): Boolean =
+    fallback == null
+
+  @inline
+  private[this] def pushEnclosureRing(ring: Long, offset: Int, enc: Boolean): Long = {
+    if (enc)
+      ring | (1L << (offset + 1))
+    else
+      ring & ~(1L << (offset + 1))
+  }
+
+  @inline
+  private[this] def pushEnclosureFallback(fallback: BList, enc: Boolean): BList =
+    enc :: fallback
+
+  @inline
+  @SuppressWarnings(Array("org.wartremover.warts.Equals"))
+  private[this] def checkPopEnclosure(ring: Long, offset: Int, fallback: BList): Boolean =
+    fallback == null
+
+  @inline
+  @SuppressWarnings(
+    Array(
+      "org.wartremover.warts.IsInstanceOf",
+      "org.wartremover.warts.AsInstanceOf",
+      "org.wartremover.warts.Null"))
+  private[this] def popEnclosureFallback(fallback: BList): BList = {
+    if (fallback.isInstanceOf[BList.Last])
+      null
+    else
+      fallback.asInstanceOf[BList.Cons].tail
   }
 }
