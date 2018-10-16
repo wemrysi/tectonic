@@ -29,8 +29,6 @@ abstract class Plate[A] {
   def num(s: CharSequence, decIdx: Int, expIdx: Int): Signal
   def str(s: CharSequence): Signal
 
-  def enclosure(): Enclosure
-
   def nestMap(pathComponent: CharSequence): Signal
   def nestArr(): Signal
   def nestMeta(pathComponent: CharSequence): Signal

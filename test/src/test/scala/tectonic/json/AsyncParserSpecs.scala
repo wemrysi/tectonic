@@ -21,7 +21,7 @@ import org.specs2.mutable.Specification
 
 import tectonic.test._
 
-import scala.{Array, Boolean, Int, List, Unit}
+import scala.{Array, Boolean, Int, List, Unit, Predef}, Predef._
 import scala.collection.mutable
 
 import java.lang.{CharSequence, SuppressWarnings}
@@ -138,8 +138,6 @@ object AsyncParserSpecs extends Specification {
         def num(s: CharSequence, decIdx: Int, expIdx: Int): Signal = Signal.Continue
         def str(s: CharSequence): Signal = Signal.Continue
 
-        def enclosure(): Enclosure = Enclosure.None
-
         def nestMap(pathComponent: CharSequence): Signal = Signal.Continue
         def nestArr(): Signal = Signal.Continue
         def nestMeta(pathComponent: CharSequence): Signal = Signal.Continue
@@ -169,8 +167,6 @@ object AsyncParserSpecs extends Specification {
         def num(s: CharSequence, decIdx: Int, expIdx: Int): Signal = Signal.Continue
         def str(s: CharSequence): Signal = Signal.Continue
 
-        def enclosure(): Enclosure = Enclosure.None
-
         def nestMap(pathComponent: CharSequence): Signal = Signal.Continue
         def nestArr(): Signal = Signal.Continue
         def nestMeta(pathComponent: CharSequence): Signal = Signal.Continue
@@ -189,6 +185,68 @@ object AsyncParserSpecs extends Specification {
 
       parser.finish() must beRight(())
       calls.toList mustEqual List(false, false, true)
+    }
+
+    "handle arbitrarily nested arrays" >> {
+      "1" >> {
+        "[[1]]" must parseRowAs(NestArr, NestArr, Num("1", -1, -1), Unnest, Unnest)
+      }
+
+      "63" >> {
+        val input =
+          (0 until 63).map(_ => '[').mkString +
+            "1" +
+            (0 until 63).map(_ => ']').mkString
+
+        val output =
+          (0 until 63).map(_ => NestArr) ++
+            List(Num("1", -1, -1)) ++
+            (0 until 63).map(_ => Unnest)
+
+        input must parseRowAs(output: _*)
+      }
+
+      "64" >> {
+        val input =
+          (0 until 64).map(_ => '[').mkString +
+            "1" +
+            (0 until 64).map(_ => ']').mkString
+
+        val output =
+          (0 until 64).map(_ => NestArr) ++
+            List(Num("1", -1, -1)) ++
+            (0 until 64).map(_ => Unnest)
+
+        input must parseRowAs(output: _*)
+      }
+
+      "65" >> {
+        val input =
+          (0 until 65).map(_ => '[').mkString +
+            "1" +
+            (0 until 65).map(_ => ']').mkString
+
+        val output =
+          (0 until 65).map(_ => NestArr) ++
+            List(Num("1", -1, -1)) ++
+            (0 until 65).map(_ => Unnest)
+
+        input must parseRowAs(output: _*)
+      }
+
+      "100" >> {
+        val input =
+          (0 until 100).map(_ => '[').mkString +
+            "1" +
+            (0 until 100).map(_ => ']').mkString
+
+        val output =
+          (0 until 100).map(_ => NestArr) ++
+            List(Num("1", -1, -1)) ++
+            (0 until 100).map(_ => Unnest)
+
+        input must parseRowAs(output: _*)
+      }
     }
   }
 }

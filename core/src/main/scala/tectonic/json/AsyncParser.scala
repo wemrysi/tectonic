@@ -43,7 +43,9 @@ package json
  * kDEALINGS IN THE SOFTWARE.
  */
 
-import scala.{inline, Array, Boolean, Byte, Char, Either, Int, Left, Right, Unit}
+import tectonic.util.BList
+
+import scala.{inline, Array, Boolean, Byte, Char, Either, Int, Left, Long, Right, Unit}
 import scala.annotation.switch
 import scala.math.max
 import scala.util.control
@@ -58,9 +60,13 @@ object AsyncParser {
   case object ValueStream extends Mode(-1, 0)
   case object SingleValue extends Mode(-1, -1)
 
-  @SuppressWarnings(Array("org.wartremover.warts.DefaultArguments"))
+  @SuppressWarnings(
+    Array(
+      "org.wartremover.warts.DefaultArguments",
+      "org.wartremover.warts.Null"))
   def apply[A](plate: Plate[A], mode: Mode = SingleValue): AsyncParser[A] =
     new AsyncParser(plate, state = mode.start, curr = 0,
+      ring = 0L, roffset = -1, fallback = null,
       data = new Array[Byte](131072), len = 0, allocated = 131072,
       offset = 0, done = false, streamMode = mode.value)
 }
@@ -108,6 +114,9 @@ final class AsyncParser[A] protected[tectonic] (
   _plate: Plate[A],
   protected[tectonic] var state: Int,
   protected[tectonic] var curr: Int,
+  protected[tectonic] var ring: Long,
+  protected[tectonic] var roffset: Int,
+  protected[tectonic] var fallback: BList,
   protected[tectonic] var data: Array[Byte],
   protected[tectonic] var len: Int,
   protected[tectonic] var allocated: Int,
@@ -122,7 +131,7 @@ final class AsyncParser[A] protected[tectonic] (
   protected[this] final def column(i: Int) = i - pos
 
   final def copy(): AsyncParser[A] =
-    new AsyncParser(_plate, state, curr, data.clone, len, allocated, offset, done, streamMode)
+    new AsyncParser(_plate, state, curr, ring, roffset, fallback, data.clone, len, allocated, offset, done, streamMode)
 
   @SuppressWarnings(
     Array(
@@ -264,7 +273,7 @@ final class AsyncParser[A] protected[tectonic] (
           val j = if (state <= 0) {
             parse(offset)
           } else {
-            rparse(state, curr)
+            rparse(state, curr, ring, roffset, fallback)
           }
           if (streamMode > 0) {
             state = ASYNC_POSTVAL
@@ -319,9 +328,12 @@ final class AsyncParser[A] protected[tectonic] (
    * arguments are the exact arguments we can pass to rparse to
    * continue where we left off.
    */
-  protected[this] final def checkpoint(state: Int, i: Int): Unit = {
+  protected[this] final def checkpoint(state: Int, i: Int, ring: Long, offset: Int, fallback: BList): Unit = {
     this.state = state
     this.curr = i
+    this.ring = ring
+    this.roffset = offset
+    this.fallback = fallback
   }
 
   /**
