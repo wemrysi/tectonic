@@ -123,7 +123,7 @@ final class Parser[A] protected[tectonic] (
   protected[tectonic] var offset: Int,
   protected[tectonic] var done: Boolean,
   protected[tectonic] var streamMode: Int
-) extends BaseParser[A](_plate) with ByteBasedParser[A] {
+) extends BaseParser[A](_plate) with ByteBasedParser[A] with GenericParser[A] {
 
   protected[this] var line = 0
   protected[this] var pos = 0
@@ -146,14 +146,6 @@ final class Parser[A] protected[tectonic] (
     len = need
     churn()
   }
-
-  @SuppressWarnings(Array("org.wartremover.warts.Overloading"))
-  final def absorb(bytes: Array[Byte]): Either[ParseException, A] =
-    absorb(ByteBuffer.wrap(bytes))
-
-  @SuppressWarnings(Array("org.wartremover.warts.Overloading"))
-  final def absorb(s: String): Either[ParseException, A] =
-    absorb(ByteBuffer.wrap(s.getBytes(utf8)))
 
   final def finish(): Either[ParseException, A] = {
     done = true

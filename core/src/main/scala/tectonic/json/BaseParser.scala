@@ -48,12 +48,7 @@ import tectonic.util.BList
 import scala.{inline, sys, Array, Boolean, Char, Int, Long, Nothing, Predef, Unit}, Predef._
 import scala.annotation.{switch, tailrec}
 
-import java.lang.{CharSequence, Exception, IndexOutOfBoundsException, String, SuppressWarnings}
-import java.nio.charset.Charset
-
-final case class ParseException(msg: String, index: Int, line: Int, col: Int) extends Exception(msg)
-
-final case class IncompleteParseException(msg: String) extends Exception(msg)
+import java.lang.{CharSequence, IndexOutOfBoundsException, String, SuppressWarnings}
 
 /**
  * BaseParser implements a state machine for correctly parsing JSON data.
@@ -81,7 +76,7 @@ final case class IncompleteParseException(msg: String) extends Exception(msg)
     "org.wartremover.warts.FinalVal"))
 abstract class BaseParser[A](protected[this] final val plate: Plate[A]) {
 
-  protected[this] final val utf8 = Charset.forName("UTF-8")
+  protected[this] final val utf8 = GenericParser.Utf8
 
   /**
    * Read the byte/char at 'i' as a Char.
