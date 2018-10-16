@@ -15,6 +15,7 @@
  */
 
 package tectonic
+package json
 
 import org.specs2.mutable.Specification
 
