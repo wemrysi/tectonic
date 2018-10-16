@@ -18,7 +18,7 @@ package tectonic
 
 import org.specs2.matcher.{Matcher, MatchersImplicits}
 
-import tectonic.json.AsyncParser
+import tectonic.json.Parser
 
 import scala.StringContext
 import scala.util.{Left, Right}
@@ -34,7 +34,7 @@ package object test {
     parseAs(expected :+ Event.FinishRow: _*)
 
   def parseAs(expected: Event*): Matcher[String] = { input: String =>
-    val parser = AsyncParser(new ReifiedTerminalPlate, AsyncParser.ValueStream)
+    val parser = Parser(new ReifiedTerminalPlate, Parser.ValueStream)
 
     (parser.absorb(input), parser.finish()) match {
       case (Right(init), Right(tail)) =>

@@ -27,7 +27,7 @@ import scala.collection.mutable
 import java.lang.{CharSequence, SuppressWarnings}
 
 @SuppressWarnings(Array("org.wartremover.warts.Equals"))
-object AsyncParserSpecs extends Specification {
+object ParserSpecs extends Specification {
 
   "async line-delimited parsing" should {
     import Event._
@@ -129,7 +129,7 @@ object AsyncParserSpecs extends Specification {
     "call finishBatch with false, and then true on complete value" in {
       val calls = new mutable.ListBuffer[Boolean]
 
-      val parser = AsyncParser(new Plate[Unit] {
+      val parser = Parser(new Plate[Unit] {
         def nul(): Signal = Signal.Continue
         def fls(): Signal = Signal.Continue
         def tru(): Signal = Signal.Continue
@@ -146,7 +146,7 @@ object AsyncParserSpecs extends Specification {
 
         def finishRow(): Unit = ()
         def finishBatch(terminal: Boolean): Unit = calls += terminal
-      }, AsyncParser.ValueStream)
+      }, Parser.ValueStream)
 
       parser.absorb("42") must beRight(())
       calls.toList mustEqual List(false)
@@ -158,7 +158,7 @@ object AsyncParserSpecs extends Specification {
     "call finishBatch with false, and then true on incomplete value" in {
       val calls = new mutable.ListBuffer[Boolean]
 
-      val parser = AsyncParser(new Plate[Unit] {
+      val parser = Parser(new Plate[Unit] {
         def nul(): Signal = Signal.Continue
         def fls(): Signal = Signal.Continue
         def tru(): Signal = Signal.Continue
@@ -175,7 +175,7 @@ object AsyncParserSpecs extends Specification {
 
         def finishRow(): Unit = ()
         def finishBatch(terminal: Boolean): Unit = calls += terminal
-      }, AsyncParser.ValueStream)
+      }, Parser.ValueStream)
 
       parser.absorb("\"h") must beRight(())
       calls.toList mustEqual List(false)

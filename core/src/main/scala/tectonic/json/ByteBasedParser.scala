@@ -64,7 +64,7 @@ import java.lang.SuppressWarnings
  * input data is UTF-8.
  */
 @SuppressWarnings(Array("org.wartremover.warts.Var"))
-trait ByteBasedParser[A] extends Parser[A] {
+trait ByteBasedParser[A] extends BaseParser[A] {
   protected[this] def byte(i: Int): Byte
 
   /**
