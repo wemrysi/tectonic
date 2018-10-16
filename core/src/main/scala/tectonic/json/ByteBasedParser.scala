@@ -15,6 +15,7 @@
  */
 
 package tectonic
+package json
 
 /*
  * This file substantially copied from the Jawn project and lightly modified. All
@@ -41,6 +42,8 @@ package tectonic
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
+
+import tectonic.util.CharBuilder
 
 import scala.{Array, Boolean, Byte, Int, StringContext}
 import scala.annotation.switch

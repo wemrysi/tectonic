@@ -18,6 +18,8 @@ package tectonic
 
 import org.specs2.matcher.{Matcher, MatchersImplicits}
 
+import tectonic.json.AsyncParser
+
 import scala.StringContext
 import scala.util.{Left, Right}
 
