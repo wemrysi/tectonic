@@ -16,11 +16,11 @@
 
 package tectonic
 
-import java.lang.CharSequence
-
 import scala.{Boolean, Int, Unit}
 
-abstract class Plate[A] {
+import java.lang.CharSequence
+
+abstract class Plate[A] { self =>
   def nul(): Signal
   def fls(): Signal
   def tru(): Signal
@@ -37,4 +37,25 @@ abstract class Plate[A] {
 
   def finishRow(): Unit
   def finishBatch(terminal: Boolean): A
+
+  final def mapDelegate[B](f: A => B): Plate[B] = new Plate[B] {
+    def nul(): Signal = self.nul()
+    def fls(): Signal = self.fls()
+    def tru(): Signal = self.tru()
+    def map(): Signal = self.map()
+    def arr(): Signal = self.arr()
+    def num(s: CharSequence, decIdx: Int, expIdx: Int): Signal = self.num(s, decIdx, expIdx)
+    def str(s: CharSequence): Signal = self.str(s)
+
+    def nestMap(pathComponent: CharSequence): Signal = self.nestMap(pathComponent)
+    def nestArr(): Signal = self.nestArr()
+    def nestMeta(pathComponent: CharSequence): Signal = self.nestMeta(pathComponent)
+
+    def unnest(): Signal = self.unnest()
+
+    def finishRow(): Unit = self.finishRow()
+
+    override def finishBatch(terminal: Boolean): B =
+      f(self.finishBatch(terminal))
+  }
 }

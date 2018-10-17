@@ -13,7 +13,7 @@ lazy val publishTestsSettings = Seq(
 lazy val root = project
   .in(file("."))
   .settings(noPublishSettings)
-  .aggregate(core, test)
+  .aggregate(core, fs2, test)
   .enablePlugins(AutomateHeaderPlugin)
 
 lazy val core = project
@@ -22,6 +22,19 @@ lazy val core = project
   .settings(
     performMavenCentralSync := false,
     publishAsOSSProject := true)
+  .enablePlugins(AutomateHeaderPlugin)
+
+lazy val fs2 = project
+  .in(file("fs2"))
+  .dependsOn(
+    core,
+    test % "test->test")
+  .settings(name := "tectonic-fs2")
+  .settings(
+    performMavenCentralSync := false,
+    publishAsOSSProject := true,
+
+    libraryDependencies += "co.fs2" %% "fs2-core" % "1.0.0")
   .enablePlugins(AutomateHeaderPlugin)
 
 lazy val test = project
