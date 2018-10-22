@@ -21,6 +21,7 @@ import cats.effect.Sync
 import cats.syntax.all._
 
 import _root_.fs2.{Chunk, Pipe, Stream}
+import _root_.fs2.interop.scodec.ByteVectorChunk
 
 import scala.{Array, Byte, List}
 import scala.collection.mutable
@@ -46,9 +47,9 @@ object StreamParser {
           case chunk: Chunk.ByteBuffer =>
             Sync[F].delay(parser.absorb(chunk.buf): Either[Throwable, Chunk[A]]).rethrow.map(List(_))
 
-          case Chunk.ByteVectorChunk(bv) =>
+          case chunk: ByteVectorChunk =>
             Sync[F] delay {
-              bv.foldLeftBB(List[Chunk[A]]()) { (acc, buf) =>
+              chunk.toByteVector.foldLeftBB(List[Chunk[A]]()) { (acc, buf) =>
                 parser.absorb(buf).fold(throw _, _ :: acc)
               }
             }
@@ -70,7 +71,7 @@ object StreamParser {
           Chunk.seq(buffer.toList)
         }
 
-        Stream.evalUnChunk(chunkF)
+        Stream.eval(chunkF).flatMap(c => Stream.chunk(c).covary[F])
       }
 
       val finishF = Sync[F].delay(parser.finish(): Either[Throwable, Chunk[A]]).rethrow map { ca =>
@@ -82,7 +83,7 @@ object StreamParser {
         Chunk.seq(buffer.toList)
       }
 
-      init ++ Stream.evalUnChunk(finishF)
+      init ++ Stream.eval(finishF).flatMap(c => Stream.chunk(c).covary[F])
     }
   }
 }

@@ -36,7 +36,9 @@ lazy val fs2 = project
     performMavenCentralSync := false,
     publishAsOSSProject := true,
 
-    libraryDependencies += "co.fs2" %% "fs2-core" % Fs2Version)
+    libraryDependencies ++= Seq(
+      "co.fs2" %% "fs2-core" % "0.10.6",
+      "co.fs2" %% "fs2-scodec" % "0.10.6"))
   .enablePlugins(AutomateHeaderPlugin)
 
 lazy val test = project

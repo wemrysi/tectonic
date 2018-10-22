@@ -20,6 +20,7 @@ package fs2
 import cats.effect.IO
 
 import _root_.fs2.{Chunk, Stream}
+import _root_.fs2.interop.scodec.ByteVectorChunk
 
 import tectonic.json.Parser
 import tectonic.test.{Event, ReifiedTerminalPlate}
@@ -40,12 +41,12 @@ object StreamParserSpecs extends Specification {
 
   "stream parser transduction" should {
     "parse a single value" in {
-      val results = Stream.chunk(Chunk.Bytes("42".getBytes)).through(StreamParser(parserF))
+      val results = Stream.chunk(Chunk.Bytes("42".getBytes)).covary[IO].through(StreamParser(parserF))
       results.compile.toList.unsafeRunSync mustEqual List(Num("42", -1, -1), FinishRow)
     }
 
     "parse a two values from a single chunk" in {
-      val results = Stream.chunk(Chunk.Bytes("42 true".getBytes)).through(StreamParser(parserF))
+      val results = Stream.chunk(Chunk.Bytes("42 true".getBytes)).covary[IO].through(StreamParser(parserF))
       val expected = List(Num("42", -1, -1), FinishRow, Tru, FinishRow)
 
       results.compile.toList.unsafeRunSync mustEqual expected
@@ -55,7 +56,7 @@ object StreamParserSpecs extends Specification {
       val input = Stream.chunk(Chunk.Bytes("4".getBytes)) ++
         Stream.chunk(Chunk.Bytes("2".getBytes))
 
-      val results = input.through(StreamParser(parserF))
+      val results = input.covary[IO].through(StreamParser(parserF))
       val expected = List(Num("42", -1, -1), FinishRow)
 
       results.compile.toList.unsafeRunSync mustEqual expected
@@ -65,7 +66,7 @@ object StreamParserSpecs extends Specification {
       val input = Stream.chunk(Chunk.Bytes("42 ".getBytes)) ++
         Stream.chunk(Chunk.Bytes("true".getBytes))
 
-      val results = input.through(StreamParser(parserF))
+      val results = input.covary[IO].through(StreamParser(parserF))
       val expected = List(Num("42", -1, -1), FinishRow, Tru, FinishRow)
 
       results.compile.toList.unsafeRunSync mustEqual expected
@@ -74,7 +75,7 @@ object StreamParserSpecs extends Specification {
     "parse a value from a bytebuffer chunk" in {
       val input = Stream.chunk(Chunk.ByteBuffer(ByteBuffer.wrap("42".getBytes)))
 
-      val results = input.through(StreamParser(parserF))
+      val results = input.covary[IO].through(StreamParser(parserF))
       val expected = List(Num("42", -1, -1), FinishRow)
 
       results.compile.toList.unsafeRunSync mustEqual expected
@@ -82,11 +83,11 @@ object StreamParserSpecs extends Specification {
 
     "parse two values from a split bytevector chunk" in {
       val input = Stream.chunk(
-        Chunk.ByteVectorChunk(
+        ByteVectorChunk(
           ByteVector.view(ByteBuffer.wrap("42 ".getBytes)) ++
             ByteVector.view(ByteBuffer.wrap("true".getBytes))))
 
-      val results = input.through(StreamParser(parserF))
+      val results = input.covary[IO].through(StreamParser(parserF))
       val expected = List(Num("42", -1, -1), FinishRow, Tru, FinishRow)
 
       results.compile.toList.unsafeRunSync mustEqual expected
