@@ -6,6 +6,8 @@ scmInfo in ThisBuild := Some(ScmInfo(
   url("https://github.com/slamdata/tectonic"),
   "scm:git@github.com:slamdata/tectonic.git"))
 
+val Fs2Version = "1.0.0"
+
 // Include to also publish a project's tests
 lazy val publishTestsSettings = Seq(
   publishArtifact in (Test, packageBin) := true)
@@ -34,7 +36,7 @@ lazy val fs2 = project
     performMavenCentralSync := false,
     publishAsOSSProject := true,
 
-    libraryDependencies += "co.fs2" %% "fs2-core" % "1.0.0")
+    libraryDependencies += "co.fs2" %% "fs2-core" % Fs2Version)
   .enablePlugins(AutomateHeaderPlugin)
 
 lazy val test = project
@@ -47,3 +49,24 @@ lazy val test = project
 
     libraryDependencies += "org.specs2" %% "specs2-core" % "4.3.4")
   .enablePlugins(AutomateHeaderPlugin)
+
+lazy val benchmarks = project
+  .in(file("benchmarks"))
+  .dependsOn(core, fs2)
+  .settings(name := "tectonic-benchmarks")
+  .settings(noPublishSettings)
+  .settings(
+    scalacStrictMode := false,
+    javaOptions += "-XX:+HeapDumpOnOutOfMemoryError",
+    javaOptions += s"-Dproject.resource.dir=${(Compile / resourceDirectory).value}",
+
+    libraryDependencies += "co.fs2" %% "fs2-core" % Fs2Version,
+    libraryDependencies += "co.fs2" %% "fs2-io" % Fs2Version)
+  .settings(    // magic rewiring so sbt-jmh works sanely
+    Jmh / sourceDirectory := (Compile / sourceDirectory).value,
+    Jmh / classDirectory := (Compile / classDirectory).value,
+    Jmh / dependencyClasspath := (Compile / dependencyClasspath).value,
+    Jmh / compile := (Jmh / compile).dependsOn(Compile / compile).value,
+    Jmh / run := (Jmh / run).dependsOn(Jmh / compile).evaluated)
+  .enablePlugins(AutomateHeaderPlugin)
+  .enablePlugins(JmhPlugin)
