@@ -60,8 +60,11 @@ lazy val benchmarks = project
     javaOptions += "-XX:+HeapDumpOnOutOfMemoryError",
     javaOptions += s"-Dproject.resource.dir=${(Compile / resourceDirectory).value}",
 
-    libraryDependencies += "co.fs2" %% "fs2-core" % Fs2Version,
-    libraryDependencies += "co.fs2" %% "fs2-io" % Fs2Version)
+    libraryDependencies ++= Seq(
+      "co.fs2" %% "fs2-core" % Fs2Version,
+      "co.fs2" %% "fs2-io"   % Fs2Version,
+
+      "org.http4s" %% "jawn-fs2" % "0.13.0"))
   .settings(    // magic rewiring so sbt-jmh works sanely
     Jmh / sourceDirectory := (Compile / sourceDirectory).value,
     Jmh / classDirectory := (Compile / classDirectory).value,

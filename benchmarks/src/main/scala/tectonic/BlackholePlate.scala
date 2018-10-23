@@ -23,6 +23,7 @@ import org.openjdk.jmh.infra.Blackhole
 final class BlackholePlate(
     vectorCost: Long,
     scalarCost: Long,
+    tinyScalarCost: Long,
     numericCost: Long,
     rowCost: Long,
     batchCost: Long) extends Plate[Chunk[Nothing]] {
@@ -30,32 +31,36 @@ final class BlackholePlate(
   import Blackhole.consumeCPU
 
   def nul(): Signal = {
-    consumeCPU(scalarCost)
+    consumeCPU(tinyScalarCost)
     Signal.Continue
   }
 
   def fls(): Signal = {
-    consumeCPU(scalarCost)
+    consumeCPU(tinyScalarCost)
     Signal.Continue
   }
 
   def tru(): Signal = {
-    consumeCPU(scalarCost)
+    consumeCPU(tinyScalarCost)
     Signal.Continue
   }
 
   def map(): Signal = {
-    consumeCPU(scalarCost)
+    consumeCPU(tinyScalarCost)
     Signal.Continue
   }
 
   def arr(): Signal = {
-    consumeCPU(scalarCost)
+    consumeCPU(tinyScalarCost)
     Signal.Continue
   }
 
   def num(s: CharSequence, decIdx: Int, expIdx: Int): Signal = {
-    consumeCPU(numericCost)
+    if (decIdx < 0 && expIdx < 0)
+      consumeCPU(scalarCost)
+    else
+      consumeCPU(numericCost)
+
     Signal.Continue
   }
 

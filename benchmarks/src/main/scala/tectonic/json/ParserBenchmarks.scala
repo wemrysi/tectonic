@@ -21,6 +21,8 @@ import cats.effect.{ContextShift, IO}
 
 import _root_.fs2.io.file
 
+import jawnfs2._
+
 import org.openjdk.jmh.annotations.{Benchmark, BenchmarkMode, Mode, OutputTimeUnit, Param, Scope, State}
 import org.openjdk.jmh.infra.Blackhole
 
@@ -35,6 +37,8 @@ import java.util.concurrent.{Executors, TimeUnit}
 @BenchmarkMode(Array(Mode.AverageTime))
 @State(Scope.Benchmark)
 class ParserBenchmarks {
+  val TectonicFramework = "tectonic"
+  val JawnFramework = "jawn"
 
   private[this] implicit val CS: ContextShift[IO] =
     IO.contextShift(ExecutionContext.global)
@@ -53,24 +57,24 @@ class ParserBenchmarks {
 
   private[this] val UghPath = ResourceDir.resolve("ugh10k.json")
 
+  // optimized columnar plate vs optimized row facade (invented out of thin air by Daniel and Alissa 😁)
+
+  val tectonicVectorCost: Long = 4   // Cons object allocation + memory store
+  val tectonicTinyScalarCost: Long = 8    // hashmap get + bitset put
+  val tectonicScalarCost: Long = 16   // hashmap get + check on array + amortized resize/allocate + array store
+  val tectonicRowCost: Long = 2   // increment integer + bounds check + amortized reset
+  val tectonicBatchCost: Long = 1   // (maybe) reset state + bounds check
+
+  val numericCost: Long = 512   // scalarCost + crazy numeric shenanigans
+
+  val jawnVectorAddCost: Long = 32   // hashmap something + checks + allocations + stuff
+  val jawnVectorFinalCost: Long = 4   // final allocation + memory store
+  val jawnScalarCost: Long = 2     // object allocation
+  val jawnTinyScalarCost: Long = 1   // non-volatile memory read
+
   // params
 
-  @Param(Array("8"))    // Cons object allocation + memory store
-  var vectorCost: Long = _
-
-  @Param(Array("16"))    // hashmap get + check on array + amortized resize/allocate
-  var scalarCost: Long = _
-
-  @Param(Array("512"))   // scalarCost + crazy numeric shenanigans
-  var numericCost: Long = _
-
-  @Param(Array("4"))    // increment integer + bounds check + amortized reset
-  var rowCost: Long = _
-
-  @Param(Array("4"))    // reset state + bounds check
-  var batchCost: Long = _
-
-  @Param(Array("tectonic"/*, "jawn"*/))
+  @Param(Array("tectonic", "jawn"))
   var framework: String = _
 
   // benchmarks
@@ -79,17 +83,27 @@ class ParserBenchmarks {
   @Benchmark
   def consumeUgh(bh: Blackhole): Unit = {
     val plate = new BlackholePlate(
-      vectorCost,
-      scalarCost,
+      tectonicVectorCost,
+      tectonicScalarCost,
+      tectonicTinyScalarCost,
       numericCost,
-      rowCost,
-      batchCost)
+      tectonicRowCost,
+      tectonicBatchCost)
 
-    val eff = file
-      .readAll[IO](UghPath, BlockingEC, ChunkSize)
-      .through(StreamParser[IO, Nothing](IO(Parser(plate, Parser.UnwrapArray))))
-      .compile.drain
+    implicit val facade = new BlackholeFacade(
+      jawnVectorAddCost,
+      jawnVectorFinalCost,
+      jawnScalarCost,
+      jawnTinyScalarCost,
+      numericCost)
 
-    eff.unsafeRunSync()
+    val contents = file.readAll[IO](UghPath, BlockingEC, ChunkSize)
+
+    val processed = if (framework == TectonicFramework)
+      contents.through(StreamParser[IO, Nothing](IO(Parser(plate, Parser.UnwrapArray))))
+    else
+      contents.chunks.unwrapJsonArray
+
+    processed.compile.drain.unsafeRunSync()
   }
 }
