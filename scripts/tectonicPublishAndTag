@@ -12,3 +12,4 @@ bumpInDownstream() { echo $1 > tectonic-version; }
 export -f bumpInDownstream
 
 scripts/bumpDependentProject slamdata quasar bumpInDownstream
+scripts/bumpDependentProject slamdata qdata bumpInDownstream
