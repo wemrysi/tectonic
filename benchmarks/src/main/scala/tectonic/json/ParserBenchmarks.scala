@@ -75,14 +75,27 @@ class ParserBenchmarks {
   @Param(Array("tectonic", "jawn"))
   var framework: String = _
 
-  @Param(Array("ugh10k"))
-  var file: String = _
+  @Param(Array(
+    "bar (not wrapped)",
+    "bla2 (not wrapped)",
+    "bla25 (wrapped)",
+    "countries.geo (not wrapped)",
+    "dkw-sample (not wrapped)",
+    "foo (wrapped)",
+    "qux1 (not wrapped)",
+    "qux2 (not wrapped)",
+    "ugh10k (wrapped)"))
+  var input: String = _
 
   // benchmarks
 
   // includes the cost of file IO; not sure if that's a good thing?
   @Benchmark
   def parseThroughFs2(bh: Blackhole): Unit = {
+    val modeStart = input.indexOf('(')
+    val inputMode = input.substring(modeStart + 1, input.length - 1) == "wrapped"
+    val inputFile = input.substring(0, modeStart - 1)
+
     val plate = new BlackholePlate(
       tectonicVectorCost,
       tectonicScalarCost,
@@ -99,14 +112,19 @@ class ParserBenchmarks {
       numericCost)
 
     val contents = file.readAll[IO](
-      ResourceDir.resolve(file + ".json"),
+      ResourceDir.resolve(inputFile + ".json"),
       BlockingEC,
       ChunkSize)
 
-    val processed = if (framework == TectonicFramework)
-      contents.through(StreamParser[IO, Nothing](IO(Parser(plate, Parser.UnwrapArray))))
-    else
-      contents.chunks.unwrapJsonArray
+    val processed = if (framework == TectonicFramework) {
+      val mode = if (inputMode) Parser.UnwrapArray else Parser.ValueStream
+      contents.through(StreamParser[IO, Nothing](IO(Parser(plate, mode))))
+    } else {
+      if (inputMode)
+        contents.chunks.unwrapJsonArray
+      else
+        contents.chunks.parseJsonStream
+    }
 
     processed.compile.drain.unsafeRunSync()
   }
