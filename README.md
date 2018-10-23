@@ -74,13 +74,30 @@ Both frameworks are benchmarked *through* [fs2](https://fs2.io) (in the case of 
 
 As an aside, even apart from the columnar vs row-oriented data structures, Tectonic does have some meaningful optimizations relative to Jawn. In particular, Tectonic is able to maintain a much more efficient object/array parse state due to the fact that it is not relying on an implicit stack of `Context`s to maintain that state for it. This is particularly noticeable for object/array nesting depth less than 64 levels, which seems to be far-and-away the most common case.
 
-### Benchmark Results
+### Benchmark Comparison to Jawn
 
-The following were run on my laptop in powered mode with networking disabled, 10 warmup iterations and 10 measurement runs in a forked JVM. You can find all of the sources in the **benchmarks** subproject. Please note that these results are dependent on the assumptions codified in `FacadeTuningParams`.
+The following were run on my laptop in powered mode with networking disabled, 20 warmup iterations and 20 measurement runs in a forked JVM. You can find all of the sources in the **benchmarks** subproject. Please note that these results are extremely dependent on the assumptions codified in `FacadeTuningParams`. Lower numbers are better.
 
-```
-TODO...
-```
+| Framework     |                 Input | Milliseconds |   Error |
+| ---           |                   --: |          --: |     :-- |
+|      tectonic |            `bar.json` |        0.092 | ± 0.001 |
+|      **jawn** |            `bar.json` |    **0.090** | ± 0.002 |
+|  **tectonic** |           `bla2.json` |    **0.424** | ± 0.003 |
+|          jawn |           `bla2.json` |        0.527 | ± 0.004 |
+|  **tectonic** |         `bla25.json`  |   **15.603** | ± 0.121 |
+|          jawn |         `bla25.json`  |       20.814 | ± 0.180 |
+|  **tectonic** |  `countries.geo.json` |   **26.435** | ± 0.193 |
+|          jawn |  `countries.geo.json` |       28.551 | ± 0.216 |
+|  **tectonic** |     `dkw-sample.json` |    **0.116** | ± 0.001 |
+|          jawn |     `dkw-sample.json` |        0.121 | ± 0.002 |
+|  **tectonic** |           `foo.json`  |    **0.566** | ± 0.005 |
+|          jawn |           `foo.json`  |        0.608 | ± 0.005 |
+|  **tectonic** |           `qux1.json` |    **9.973** | ± 0.063 |
+|          jawn |           `qux1.json` |       10.863 | ± 0.062 |
+|  **tectonic** |           `qux2.json` |   **17.717** | ± 0.096 |
+|          jawn |           `qux2.json` |       19.153 | ± 0.119 |
+|  **tectonic** |        `ugh10k.json`  |  **115.467** | ± 0.838 |
+|          jawn |        `ugh10k.json`  |      130.876 | ± 0.972 |
 
 ## License
 
