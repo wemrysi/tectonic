@@ -55,8 +55,6 @@ class ParserBenchmarks {
   private[this] val ResourceDir =
     Paths.get(System.getProperty("project.resource.dir"))
 
-  private[this] val UghPath = ResourceDir.resolve("ugh10k.json")
-
   // optimized columnar plate vs optimized row facade (invented out of thin air by Daniel and Alissa 😁)
 
   val tectonicVectorCost: Long = 4   // Cons object allocation + memory store
@@ -77,11 +75,14 @@ class ParserBenchmarks {
   @Param(Array("tectonic", "jawn"))
   var framework: String = _
 
+  @Param(Array("ugh10k"))
+  var file: String = _
+
   // benchmarks
 
   // includes the cost of file IO; not sure if that's a good thing?
   @Benchmark
-  def consumeUgh(bh: Blackhole): Unit = {
+  def parseThroughFs2(bh: Blackhole): Unit = {
     val plate = new BlackholePlate(
       tectonicVectorCost,
       tectonicScalarCost,
@@ -97,7 +98,10 @@ class ParserBenchmarks {
       jawnTinyScalarCost,
       numericCost)
 
-    val contents = file.readAll[IO](UghPath, BlockingEC, ChunkSize)
+    val contents = file.readAll[IO](
+      ResourceDir.resolve(file + ".json"),
+      BlockingEC,
+      ChunkSize)
 
     val processed = if (framework == TectonicFramework)
       contents.through(StreamParser[IO, Nothing](IO(Parser(plate, Parser.UnwrapArray))))
