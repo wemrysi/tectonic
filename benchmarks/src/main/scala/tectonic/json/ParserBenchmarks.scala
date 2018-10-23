@@ -55,20 +55,7 @@ class ParserBenchmarks {
   private[this] val ResourceDir =
     Paths.get(System.getProperty("project.resource.dir"))
 
-  // optimized columnar plate vs optimized row facade (invented out of thin air by Daniel and Alissa 😁)
-
-  val tectonicVectorCost: Long = 4   // Cons object allocation + memory store
-  val tectonicTinyScalarCost: Long = 8    // hashmap get + bitset put
-  val tectonicScalarCost: Long = 16   // hashmap get + check on array + amortized resize/allocate + array store
-  val tectonicRowCost: Long = 2   // increment integer + bounds check + amortized reset
-  val tectonicBatchCost: Long = 1   // (maybe) reset state + bounds check
-
-  val numericCost: Long = 512   // scalarCost + crazy numeric shenanigans
-
-  val jawnVectorAddCost: Long = 32   // hashmap something + checks + allocations + stuff
-  val jawnVectorFinalCost: Long = 4   // final allocation + memory store
-  val jawnScalarCost: Long = 2     // object allocation
-  val jawnTinyScalarCost: Long = 1   // non-volatile memory read
+  import FacadeTuningParams._
 
   // params
 
@@ -97,19 +84,19 @@ class ParserBenchmarks {
     val inputFile = input.substring(0, modeStart - 1)
 
     val plate = new BlackholePlate(
-      tectonicVectorCost,
-      tectonicScalarCost,
-      tectonicTinyScalarCost,
-      numericCost,
-      tectonicRowCost,
-      tectonicBatchCost)
+      Tectonic.VectorCost,
+      Tectonic.ScalarCost,
+      Tectonic.TinyScalarCost,
+      NumericCost,
+      Tectonic.RowCost,
+      Tectonic.BatchCost)
 
     implicit val facade = new BlackholeFacade(
-      jawnVectorAddCost,
-      jawnVectorFinalCost,
-      jawnScalarCost,
-      jawnTinyScalarCost,
-      numericCost)
+      Jawn.VectorAddCost,
+      Jawn.VectorFinalCost,
+      Jawn.ScalarCost,
+      Jawn.TinyScalarCost,
+      NumericCost)
 
     val contents = file.readAll[IO](
       ResourceDir.resolve(inputFile + ".json"),
@@ -127,5 +114,25 @@ class ParserBenchmarks {
     }
 
     processed.compile.drain.unsafeRunSync()
+  }
+}
+
+// optimized columnar plate vs optimized row facade (invented out of thin air by Daniel and Alissa 😁)
+private[json] object FacadeTuningParams {
+  object Tectonic {
+    val VectorCost: Long = 4   // Cons object allocation + memory store
+    val TinyScalarCost: Long = 8    // hashmap get + bitset put
+    val ScalarCost: Long = 16   // hashmap get + check on array + amortized resize/allocate + array store
+    val RowCost: Long = 2   // increment integer + bounds check + amortized reset
+    val BatchCost: Long = 1   // (maybe) reset state + bounds check
+  }
+
+  val NumericCost: Long = 512   // scalarCost + crazy numeric shenanigans
+
+  object Jawn {
+    val VectorAddCost: Long = 32   // hashmap something + checks + allocations + stuff
+    val VectorFinalCost: Long = 4   // final allocation + memory store
+    val ScalarCost: Long = 2     // object allocation
+    val TinyScalarCost: Long = 1   // non-volatile memory read
   }
 }

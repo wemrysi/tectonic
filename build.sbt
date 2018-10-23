@@ -15,7 +15,7 @@ lazy val publishTestsSettings = Seq(
 lazy val root = project
   .in(file("."))
   .settings(noPublishSettings)
-  .aggregate(core, fs2, test)
+  .aggregate(core, fs2, test, benchmarks)
   .enablePlugins(AutomateHeaderPlugin)
 
 lazy val core = project
